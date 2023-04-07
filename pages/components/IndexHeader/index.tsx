@@ -75,17 +75,19 @@ const IndexHeader: React.FC<{
 
             <div className={styles.siteIntroduction}>
                 <div className={styles.title}>
-                    <span className={styles.item}>Light</span>
-                    <span className={styles.item}>GPT</span>
+                    <span className={styles.item}>ChatGPT</span>
+                    <span className={styles.item}>Unblocked</span>
                 </div>
-                <div className={styles.description}>Based on gpt-3.5-turbo</div>
+                <div className={styles.description}>
+                    For All Your School Needs!
+                </div>
             </div>
             <div className={styles.sideMenus}>
                 <i
                     className="fab fa-github"
                     onClick={() => {
                         window.open(
-                            'https://github.com/riwigefi/light-gpt',
+                            'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                             '_blank'
                         );
                     }}

@@ -212,11 +212,9 @@ export default function Home() {
     }, []);
 
     const [currentUserMessage, setCurrentUserMessage] = useState('');
-    const tempCurrentUserMessageId = useRef(uuid());
     const userPromptRef = useRef<HTMLTextAreaElement | null>(null);
 
     const [currentAssistantMessage, setCurrentAssistantMessage] = useState('');
-    const tempCurrentAssistantMessageId = useRef(uuid());
 
     const [loading, setLoading] = useState(false);
 
@@ -269,7 +267,6 @@ export default function Home() {
         }
 
         // 先把用户输入信息展示到对话列表
-        const currentUserMessage = userPromptRef.current?.value || '';
         if (!isRegenerate && !currentUserMessage) {
             toast.warn('Please  Enter your question', { autoClose: 1000 });
             return;
@@ -293,7 +290,7 @@ export default function Home() {
             }
         }
 
-        // 当前问答的对话上下文
+        // 取出最近的5条messages，作为上下文
         const len = newMessageList.length;
         const latestMessageLimit3 = newMessageList.filter(
             (_, idx) => idx >= len - (contextMessageCount + 1)
@@ -315,7 +312,6 @@ export default function Home() {
 
         setMessageList(newMessageList);
         setCurrentUserMessage('');
-        userPromptRef.current!.value = '';
         if (!userPromptRef.current) return;
         userPromptRef.current.style.height = 'auto';
         scrollSmoothThrottle();
@@ -419,6 +415,7 @@ export default function Home() {
             }
             setLoading(false);
             controller.current = null;
+            setCurrentUserMessage('');
             setCurrentAssistantMessage('');
             scrollSmoothThrottle();
         }
@@ -595,7 +592,7 @@ export default function Home() {
                         </div>
                     ))}
                     <div className={styles.menu}>
-                        <span>{t('chatBackgroundContext')}</span>
+                        <span> Message Remembering</span>
                         <input
                             value={contextMessageCount}
                             onChange={(e) => {
@@ -603,11 +600,11 @@ export default function Home() {
                                 const count = Number.isNaN(Number(text))
                                     ? 3
                                     : Number(text);
-                                setContextMessageCount(count);
+                                setContextMessageCount(3);
                             }}
                             type="text"
                         />
-                        
+                        <span>You can't change it</span>
                     </div>
                 </div>
             </aside>
@@ -647,21 +644,12 @@ export default function Home() {
                                         removeMessageById={removeMessageById}
                                     />
                                 ))}
-                            { !loading && currentUserMessage.length > 0 && (
-                                <MessageItem id={tempCurrentUserMessageId.current}
-                                    role={ERole.user}
-                                    avatar={userAvatar}
-                                    message={currentUserMessage}
-                                    isTemp
-                                />
-                            ) }
                             {loading && currentAssistantMessage.length > 0 && (
                                 <MessageItem
-                                    id={tempCurrentAssistantMessageId.current}
+                                    id={uuid()}
                                     role={ERole.assistant}
                                     avatar={robotAvatar}
                                     message={currentAssistantMessage}
-                                    isTemp
                                 />
                             )}
                             <div className={styles.placeholder}>
@@ -671,15 +659,15 @@ export default function Home() {
                     ) : (
                         <div className={styles.apiKeyRequiredTip}>
                             <div className={styles.title}>
-                                OpenAI API Key Required
+                                Chat Will Appear Here
                             </div>
                             <div className={styles.desc}>
                                 {t('apiKeyRequiredTip1')}
                             </div>
                             <div className={styles.desc}>
                                 {t('apiKeyRequiredTip2')}
-                                <Link href="https://openai.com" target="_blank">
-                                    Open Ai Platform
+                                <Link href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">
+                                         !      It's totally free!
                                 </Link>
                             </div>
                         </div>
@@ -727,7 +715,9 @@ export default function Home() {
                             </div>
                             <textarea
                                 className={styles.userPrompt}
-                                disabled={loading}
+                                onChange={(e) => {
+                                    setCurrentUserMessage(e.target.value);
+                                }}
                                 onInput={() => {
                                     if (
                                         userPromptRef.current &&
@@ -738,9 +728,8 @@ export default function Home() {
                                             2 +
                                             'px';
                                     }
-                                    setCurrentUserMessage(userPromptRef.current!.value)
-                                    scrollSmoothThrottle();
                                 }}
+                                value={currentUserMessage}
                                 ref={(e) => {
                                     userPromptRef.current = e;
                                 }}
@@ -751,13 +740,25 @@ export default function Home() {
                                 }
                                 rows={1}
                                 onKeyDown={(event) => {
+                                    // event.key 的值不受操作系统和键盘布局的影响，它始终表示按下的是哪个字符键。
                                     // pc desktop
+
                                     if (!windowState.current.isMobile) {
                                         if (
                                             event.code === 'Enter' &&
                                             !event.shiftKey &&
                                             (event.metaKey || event.ctrlKey)
                                         ) {
+                                            // 按下 "Command/Ctrl" + "Enter"，输入换行符
+                                            const newValue =
+                                                currentUserMessage + '\n';
+                                            setCurrentUserMessage(newValue);
+                                            event.preventDefault();
+                                        } else if (
+                                            event.code === 'Enter' &&
+                                            !event.shiftKey
+                                        ) {
+                                            // 按下 "Enter"，发送请求
                                             if (
                                                 windowState.current
                                                     .isUsingComposition
@@ -767,8 +768,9 @@ export default function Home() {
                                                 false
                                             );
                                             event.preventDefault();
-                                        } 
+                                        }
                                     }
+
                                     // mobile desktop
                                     if (
                                         windowState.current.isMobile &&
@@ -785,11 +787,11 @@ export default function Home() {
                                         chatGPTTurboWithLatestUserPrompt(false);
                                     }
                                 }}
-                                onCompositionStart={() => {
+                                onCompositionStart={(e) => {
                                     windowState.current.isUsingComposition =
                                         true;
                                 }}
-                                onCompositionEnd={() => {
+                                onCompositionEnd={(e) => {
                                     windowState.current.isUsingComposition =
                                         false;
                                 }}
@@ -811,7 +813,7 @@ export default function Home() {
                             </div>
                         </div>
                         <div className={styles.siteDescription}>
-                            <span>Made by wjm</span>
+                            <span>Made by Fof/Yuvi</span>
                             <span>｜</span>
                             <span>Just have fun</span>
                         </div>
@@ -851,9 +853,9 @@ export default function Home() {
                     }`}
                 >
                     <i className="fas fa-image" onClick={convertToImage}></i>
-                    <i className="fas fa-file-download" onClick={convertToPDF}></i>
+                    <i className="fas fa-file-pdf" onClick={convertToPDF}></i>
                     <i
-                        className="fas fa-redo-alt"
+                        className="fas fa-trash-alt"
                         onClick={() => {
                             if (messageList.length === 0) {
                                 toast.warn(
@@ -951,15 +953,8 @@ export default function Home() {
                     )}
                     {activeSystemMenu === SystemSettingMenu.apiKeySettings && (
                         <div className={styles.systemRoleSettings}>
-                            <label htmlFor="apiKey">Open AI API Key</label>
-                            <input
-                                placeholder="Enter your open ai api key"
-                                id="apiKey"
-                                value={tempApiKeyValue}
-                                onChange={(e) => {
-                                    setTempApiKeyValue(e.target.value);
-                                }}
-                            ></input>
+                            <label htmlFor="apiKey">What is this?</label>
+
 
                             <div className={styles.description}>
                                 {t('apiKeyDescription')}
@@ -968,10 +963,10 @@ export default function Home() {
                             <div className={styles.benefits}>
                                 {t('apiKeyHelp')}
                                 <Link
-                                    href="https://platform.openai.com/account/api-keys"
+                                    href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                                     target="_blank"
                                 >
-                                    Open AI Platform API KEYS
+                                    Don't click this!
                                 </Link>{' '}
                             </div>
                             <div className={styles.btnContainer}>
@@ -979,10 +974,10 @@ export default function Home() {
                                     className={styles.saveButton}
                                     onClick={() => {
                                         setActiveSystemMenu('');
-                                        setApiKey(tempApiKeyValue);
+                                        setApiKey("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");
 
                                         const encryptedApiKey =
-                                            encryptApiKey(tempApiKeyValue);
+                                            encryptApiKey("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");
                                         window.localStorage.setItem(
                                             APIKeyLocalKey,
                                             encryptedApiKey
